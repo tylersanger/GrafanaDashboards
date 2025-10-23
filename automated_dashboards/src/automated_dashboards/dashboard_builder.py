@@ -225,6 +225,9 @@ class DashboardBuilder(Dashboard):
                 "Content-Type": "application/json"
             }
 
+            if not self._built_dashboard:
+                self.build()
+            
             complete_dashboard = {"dashboard": self._built_dashboard, "folderId": folder, "overwrite": True}
             encoder = JSONEncoder(indent=2, sort_keys=True)
             encoded_dashboard = encoder.encode(complete_dashboard)

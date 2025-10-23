@@ -1,0 +1,18 @@
+name: Azure Work Item Validation
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - edited
+      - opened
+      - synchronize
+
+permissions: read-all
+
+jobs:
+  verify_work_item:
+    uses: Engineering-Attain-Finance/reusable-workflows/.github/workflows/work_item_validation.yml@master
+    secrets: inherit
+    
