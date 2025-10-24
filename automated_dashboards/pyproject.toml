@@ -1,11 +1,9 @@
 [project]
 name = "automated-dashboards"
-version = "0.1.0"
-description = "Add your description here"
+version = "1.0.0"
+description = "A module to automate the creation and management of Grafana dashboards."
 readme = "README.md"
-authors = [
-    { name = "Tyler Sanger", email = "tylersanger@attainfinance.com" }
-]
+authors = [{ name = "Tyler Sanger", email = "tylersanger@attainfinance.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "black>=25.9.0",
