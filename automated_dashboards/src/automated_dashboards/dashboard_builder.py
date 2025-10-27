@@ -7,10 +7,11 @@ the construction of complex dashboards.
 from typing import List, Optional, Union, Type, Generic
 import re
 import os
-import requests
 from collections import defaultdict
 from string import ascii_uppercase
 from abc import ABC, abstractmethod
+import textwrap
+import requests
 from grafana_foundation_sdk.cog.encoder import JSONEncoder
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row, QueryVariable
 from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanel
@@ -115,13 +116,15 @@ class DashboardPanel(DashboardComponent, Generic[T, Q]):
             panel.orientation(self._orientation).display_mode(self._display_mode)
         if isinstance(panel, TimeseriesPanel):
             panel.scale_distribution(self._scale_distribution)
+
         for idx, query in enumerate(self._queries):
             ref_id = ascii_uppercase[idx]
             q = query.query_type()
+            query_expr = textwrap.dedent(query.expr).strip() # Dedent and strip query expression to make reading in the UI cleaner
             if isinstance(q, TempoQuery):
-                q.query(query.expr.strip())
+                q.query(query_expr)
             if isinstance(q, (PrometheusQuery, LokiQuery)):
-                q.expr(query.expr.strip())
+                q.expr(query_expr)
             if isinstance(q, PrometheusQuery):
                 q.legend_format(query.legend)
                 q.format(query.legend_format)

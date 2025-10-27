@@ -64,4 +64,4 @@ for service in services:
             dash.deploy_to_grafana(folder=129) # DAC Service Dashboards folder ID
             print(f"{service} | {env} dashboard deployed successfully.")
         except EnvironmentError as e:
-            print(f"Failed to deploy Creo dashboard: {e}")
+            print(f"Failed to deploy {service} | {env} dashboard: {e}")
