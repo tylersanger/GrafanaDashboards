@@ -25,10 +25,10 @@ class DeploymentEnv:
         TEMPO_PROD: Tempo production environment filter (tempo queries use dot notation)
         TEMPO_NONPROD: Tempo non-production environment filter (tempo queries use dot notation)
     """
-    PROD: str = r'deployment_environment=~".*_PROD$"'
-    NONPROD: str = r'deployment_environment!~".*_PROD$"'
-    TEMPO_PROD: str = r'deployment.environment=~".*_PROD$"'
-    TEMPO_NONPROD: str = r'deployment.environment!~".*_PROD$"'
+    PROD: str = r'deployment_environment=~".*_PROD$|Prod"'
+    NONPROD: str = r'deployment_environment!~".*_PROD$|Prod"'
+    TEMPO_PROD: str = r'deployment.environment=~".*_PROD$|Prod"'
+    TEMPO_NONPROD: str = r'deployment.environment!~".*_PROD$|Prod"'
 
 @dataclass
 class Query(Generic[Q]):
