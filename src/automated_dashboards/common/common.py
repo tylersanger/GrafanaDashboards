@@ -56,7 +56,6 @@ class Query(Generic[Q]):
 @dataclass
 class PanelOverride:
     """Defines a query override for panel customization.
-        Attributes:
     Attributes:
         query_ref: str
             Query refs start at 'A' and increment alphabetically for each query added to a panel. 
