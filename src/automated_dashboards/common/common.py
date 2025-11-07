@@ -85,8 +85,8 @@ class DataSources:
         CLOUDWATCH: The datasource for AWS CloudWatch metrics.
         MIXED: A mixed datasource for panels using multiple data sources.
     """
-    MIMIR = {"type": "prometheus", "uid": "eeou8qj3gbvgge"}
-    LOKI = {"type": "loki", "uid": "eeou8ipbcojcwc"}
-    TEMPO = {"type": "tempo", "uid": "aeou8l7tjqk8wd"}
-    CLOUDWATCH = {"type": "cloudwatch", "uid": "fepgcad6xa4u8b"}
+    MIMIR = {"type": "prometheus"}
+    LOKI = {"type": "loki"}
+    TEMPO = {"type": "tempo"}
+    CLOUDWATCH = {"type": "cloudwatch"}
     MIXED = {"uid": "-- Mixed --", "type": "datasource"}
