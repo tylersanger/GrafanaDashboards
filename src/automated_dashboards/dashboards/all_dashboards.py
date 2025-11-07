@@ -8,8 +8,7 @@ from automated_dashboards.helpers.default_dashboard import (
     TracesSection,
     LogsSection
 )
-services = ["creo", "webanalytics", "SummitApi", "affiliateleads", "Cashmoney", "lenddirect", "hotelcardifornia",
-             "tiger-authentication", "voltaire"]
+services = ["service1", "service2", "service3"]
 envs = ["prod", "nonprod"]
 
 for service in services:
