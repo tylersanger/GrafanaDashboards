@@ -235,7 +235,7 @@ class DashboardBuilder(Dashboard):
             encoder = JSONEncoder(indent=2, sort_keys=True)
             encoded_dashboard = encoder.encode(complete_dashboard)
             r = requests.post(
-                "https://grafana.attainfinance.com/api/dashboards/db",
+                "https://your-grafana-instance.com/api/dashboards/db",
                 headers=headers,
                 data=encoded_dashboard,
                 timeout=10)
