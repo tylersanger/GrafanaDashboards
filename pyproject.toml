@@ -3,7 +3,7 @@ name = "automated-dashboards"
 version = "1.0.0"
 description = "A module to automate the creation and management of Grafana dashboards."
 readme = "README.md"
-authors = [{ name = "Tyler Sanger", email = "tylersanger@attainfinance.com" }]
+authors = [{ name = "Tyler" }]
 requires-python = ">=3.12"
 dependencies = [
     "black>=25.9.0",
