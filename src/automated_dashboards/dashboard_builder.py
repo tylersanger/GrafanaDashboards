@@ -17,10 +17,15 @@ from grafana_foundation_sdk.builders.dashboard import Dashboard, Row, QueryVaria
 from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanel
 from grafana_foundation_sdk.builders.barchart import Panel as BarChartPanel
 from grafana_foundation_sdk.builders.bargauge import Panel as BarGaugePanel
+from grafana_foundation_sdk.builders.heatmap import Panel as HeatmapPanel
 from grafana_foundation_sdk.builders.tempo import TempoQuery
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQuery
 from grafana_foundation_sdk.builders.loki import Dataquery as LokiQuery
-from grafana_foundation_sdk.builders.common import ScaleDistributionConfig, ReduceDataOptions, VizLegendOptions
+from grafana_foundation_sdk.builders.common import (
+    ScaleDistributionConfig,
+    ReduceDataOptions,
+    VizLegendOptions,
+)
 from grafana_foundation_sdk.models.common import TimeZoneBrowser
 from grafana_foundation_sdk.models.dashboard import DataTransformerConfig
 from .common.common import Query, PanelOverride, DataSources, T, Q
@@ -30,7 +35,9 @@ class DashboardComponent(ABC):
     """Base interface for dashboard components."""
 
     @abstractmethod
-    def construct(self) -> Union[Row, TimeseriesPanel, BarChartPanel]:
+    def construct(
+        self,
+    ) -> Union[Row, TimeseriesPanel, BarChartPanel, BarGaugePanel, HeatmapPanel]:
         """Return the SDK object representing this component."""
 
 
@@ -58,13 +65,14 @@ class DashboardPanel(DashboardComponent, Generic[T, Q]):
         stacking_mode: Optional[str] = "none",
         visual_orientation: Optional[str] = "auto",
         display_mode: Optional[str] = "basic",
-        scale_distribution: Optional[ScaleDistributionConfig] = ScaleDistributionConfig().type(
-            "linear"
-        ),
+        scale_distribution: Optional[
+            ScaleDistributionConfig
+        ] = ScaleDistributionConfig().type("linear"),
         transformations: Optional[List[DataTransformerConfig]] = None,
         overrides: Optional[List[PanelOverride]] = None,
         reduce_options: Optional[ReduceDataOptions] = None,
         viz_legend_options: Optional[VizLegendOptions] = None,
+        calculate_data: Optional[bool] = False,
     ):
         super().__init__()
         self._title = title
@@ -80,7 +88,8 @@ class DashboardPanel(DashboardComponent, Generic[T, Q]):
         self._overrides = overrides
         self._reduce_options = reduce_options
         self._viz_legend_options = viz_legend_options
-    
+        self._calculate_data = calculate_data
+
     def get_queries(self) -> list[Query]:
         """Return the list of queries associated with this panel."""
         return self._queries
@@ -101,26 +110,40 @@ class DashboardPanel(DashboardComponent, Generic[T, Q]):
                 panel.with_transformation(transformation)
         if self._overrides:
             for override in self._overrides:
-                panel.override_by_query(override.query_ref, [
-                    {"id": "custom.axisPlacement", "value": override.axis_placement},
-                    {"id": "unit", "value": override.unit},
-                    {"id": "custom.axisLabel", "value": override.axis_label}
-                ])
+                panel.override_by_query(
+                    override.query_ref,
+                    [
+                        {
+                            "id": "custom.axisPlacement",
+                            "value": override.axis_placement,
+                        },
+                        {"id": "unit", "value": override.unit},
+                        {"id": "custom.axisLabel", "value": override.axis_label},
+                    ],
+                )
         if self._reduce_options:
             panel.reduce_options(self._reduce_options)
-        
+
         if isinstance(panel, BarChartPanel):
             panel.stacking(self._stacking_mode)
-            panel.legend(self._viz_legend_options if self._viz_legend_options else VizLegendOptions())
+            panel.legend(
+                self._viz_legend_options
+                if self._viz_legend_options
+                else VizLegendOptions()
+            )
         if isinstance(panel, BarGaugePanel):
             panel.orientation(self._orientation).display_mode(self._display_mode)
         if isinstance(panel, TimeseriesPanel):
             panel.scale_distribution(self._scale_distribution)
+        if isinstance(panel, HeatmapPanel):
+            panel.calculate(self._calculate_data)
 
         for idx, query in enumerate(self._queries):
             ref_id = ascii_uppercase[idx]
             q = query.query_type()
-            query_expr = textwrap.dedent(query.expr).strip() # Dedent and strip query expression to make reading in the UI cleaner
+            query_expr = textwrap.dedent(
+                query.expr
+            ).strip()  # Dedent and strip query expression to make reading in the UI cleaner
             if isinstance(q, TempoQuery):
                 q.query(query_expr)
             if isinstance(q, (PrometheusQuery, LokiQuery)):
@@ -145,11 +168,10 @@ class DashboardSection:
         """Add a component to this section."""
         self._components.append(component)
         return self
-    
+
     def get_components(self) -> List[DashboardComponent]:
         """Return the list of components in this section."""
         return self._components
-
 
     def construct(self) -> List[Union[Row, TimeseriesPanel]]:
         """Return a list of built SDK components."""
@@ -169,7 +191,8 @@ class DashboardBuilder(Dashboard):
         time_range: tuple[str, str] = ("now-1h", "now"),
         refresh: str = "10s",
     ):
-        super().__init__(title)
+        self._title = title
+        super().__init__(self._title)
         self.tags(tags)
         self.uid(f"{service}-{env}-dashboard".lower())
         self.refresh(refresh)
@@ -177,70 +200,132 @@ class DashboardBuilder(Dashboard):
         self.time(*time_range)
         self._sections = sections
         self._variables = defaultdict(object)
-        self._built_dashboard = None
 
     def add_section(self, section: DashboardSection) -> "DashboardBuilder":
         """Add a section to the dashboard."""
         self._sections.append(section)
         return self
-    
-    def add_dashboard_variable(self, name: str, query: str, multi_select: bool,
-                               include_all: bool, data_source: DataSources) -> None:
+
+    def add_dashboard_variable(
+        self,
+        name: str,
+        query: str,
+        multi_select: bool,
+        include_all: bool,
+        data_source: DataSources,
+    ) -> None:
         """Add a dashboard level variable to use in queries."""
-        variable = (QueryVariable(name)
-                    .datasource(data_source)
-                    .query(query)
-                    .multi(multi_select)
-                    .include_all(include_all)
-                    .allow_custom_value(False))
+        variable = (
+            QueryVariable(name)
+            .datasource(data_source)
+            .query(query)
+            .multi(multi_select)
+            .include_all(include_all)
+            .allow_custom_value(False)
+        )
         self._variables[name] = variable
 
-    def build(self) -> Dashboard:
-        """Compile all sections and return an SDK Dashboard object."""
+    def build_and_deploy(self, folder_id: Optional[int] = None) -> None:
+        """Compile all sections and deploy the dashboard to Grafana."""
 
         try:
             self._validate()
-        except ValueError as e:
-            print(e)
-        else:
-            if self._variables:
-                db_vars = list(self._variables.values())
-                self.variables(db_vars)
+            if not folder_id:
+                folder_id = self._get_folder_id()
+        except requests.HTTPError as e:
+            raise requests.HTTPError(
+                f"Failed to retrieve folders from Grafana API: {e}"
+            )
+        except (ValueError, EnvironmentError) as e:
+            raise e
 
-            for section in self._sections:
-                for component in section.construct():
-                    if isinstance(component, DashboardRow):
-                        self.with_row(component)
-                    else:
-                        self.with_panel(component)
-        self._built_dashboard = super().build()
-        return self._built_dashboard
-    
-    def deploy_to_grafana(self, folder: int) -> None:
+        if self._variables:
+            db_vars = list(self._variables.values())
+            self.variables(db_vars)
+
+        for section in self._sections:
+            for component in section.construct():
+                if isinstance(component, DashboardRow):
+                    self.with_row(component)
+                else:
+                    self.with_panel(component)
+
+        built_dashboard = super().build()
+
+        try:
+            self._deploy_to_grafana(folder_id, built_dashboard)
+        except requests.HTTPError as e:
+            raise requests.HTTPError(f"Failed to deploy dashboard to Grafana: {e}")
+
+    def _get_folder_id(self) -> int:
+        """Present a list of folders and return the selected folder ID."""
+        folder_ids = []
+        folder_names_and_ids = ""
+
+        try:
+            headers = self._construct_api_headers()
+        except EnvironmentError as e:
+            raise e
+
+        r = requests.get(
+            "https://grafana.attainfinance.com/api/folders",
+            headers=headers,
+            timeout=10,
+        )
+        r.raise_for_status()
+        folders = r.json()
+
+        print("Available Folders:")
+        folder_names_and_ids = "Name: General (Root Folder), ID: 0\n"
+        for folder in folders:
+            folder_ids.append(folder["id"])
+            folder_names_and_ids += f'Name: {folder["title"]}, ID: {folder["id"]}\n'
+
+        print(folder_names_and_ids)
+        selected_folder_id = int(
+            input(f"Enter the ID of the folder to deploy \"{self._title}\" to: ")
+        )
+        while selected_folder_id not in folder_ids and selected_folder_id != 0:
+            print("\nInvalid folder ID. Please select a valid ID from the list")
+            print(folder_names_and_ids)
+            selected_folder_id = int(
+                input(f"Enter the ID of the folder to deploy \"{self._title}\" to: ")
+            )
+        return selected_folder_id
+
+    def _deploy_to_grafana(self, folder: int, dashboard: Dashboard) -> None:
         """Deploy the built dashboard to Grafana."""
 
-        api_key = os.getenv("GRAFANA_API_KEY", None)
-        if not api_key:
-            raise EnvironmentError("GRAFANA_API_KEY environment variable not set.")
+        try:
+            headers = self._construct_api_headers()
+        except EnvironmentError as e:
+            raise e
         else:
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
+            complete_dashboard = {
+                "dashboard": dashboard,
+                "folderId": folder,
+                "overwrite": True,
             }
-
-            if not self._built_dashboard:
-                self.build()
-            
-            complete_dashboard = {"dashboard": self._built_dashboard, "folderId": folder, "overwrite": True}
             encoder = JSONEncoder(indent=2, sort_keys=True)
             encoded_dashboard = encoder.encode(complete_dashboard)
             r = requests.post(
                 "https://grafana.attainfinance.com/api/dashboards/db",
                 headers=headers,
                 data=encoded_dashboard,
-                timeout=10)
+                timeout=10,
+            )
             r.raise_for_status()
-       
+
+    def _construct_api_headers(self) -> dict:
+        """Construct the headers required for Grafana API authentication."""
+        api_key = os.getenv("GRAFANA_API_KEY", None)
+        if not api_key:
+            raise EnvironmentError("GRAFANA_API_KEY environment variable not set.")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        return headers
 
     def _validate(self) -> None:
         """Validate the dashboard configuration before building"""
@@ -249,7 +334,9 @@ class DashboardBuilder(Dashboard):
                 if isinstance(component, DashboardPanel):
                     queries = component.get_queries()
                     if not queries:
-                        raise ValueError(f"Panel '{component.get_component_name()}' has no queries defined.")
+                        raise ValueError(
+                            f"Panel '{component.get_component_name()}' has no queries defined."
+                        )
                     else:
                         dashboard_variable_names = list(self._variables.keys())
                         for query in queries:
@@ -257,10 +344,12 @@ class DashboardBuilder(Dashboard):
                             matches = [match[1][1:] for match in matches]
                             for match in matches:
                                 if match not in dashboard_variable_names:
-                                    error_msg = f"ERROR: Query references dashboard variable that is not defined. Panel will return no data.\n" \
-                                                f"Ensure the variable name is spelled correctly (case-sensitive) and has been added to the dashboard.\n" \
-                                                f"Panel: {component.get_component_name()}\n" \
-                                                f"Query: {query.expr.strip()}\n" \
-                                                f"Referenced variable: {match}\n" \
-                                                f"Defined dashboard variables: {dashboard_variable_names}."
+                                    error_msg = (
+                                        f"ERROR: Query references dashboard variable that is not defined. Panel will return no data.\n"
+                                        f"Ensure the variable name is spelled correctly (case-sensitive) and has been added to the dashboard.\n"
+                                        f"Panel: {component.get_component_name()}\n"
+                                        f"Query: {query.expr.strip()}\n"
+                                        f"Referenced variable: {match}\n"
+                                        f"Defined dashboard variables: {dashboard_variable_names}."
+                                    )
                                     raise ValueError(error_msg)

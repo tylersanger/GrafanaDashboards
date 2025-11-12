@@ -1,7 +1,12 @@
 """
 This is the 'golden path' default dashboard configuration.
 """
-from grafana_foundation_sdk.builders.common import ScaleDistributionConfig, ReduceDataOptions, VizLegendOptions
+
+from grafana_foundation_sdk.builders.common import (
+    ScaleDistributionConfig,
+    ReduceDataOptions,
+    VizLegendOptions,
+)
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQuery
 from grafana_foundation_sdk.builders.tempo import TempoQuery
 from grafana_foundation_sdk.builders.loki import Dataquery as LokiQuery
@@ -50,7 +55,9 @@ class ServiceSummarySection(DashboardSection):
                 title="Time Spent",
                 datasource=DataSources.MIMIR,
                 panel_type=BarChartPanel,
-                viz_legend_options=VizLegendOptions().show_legend(True).placement("bottom"),
+                viz_legend_options=VizLegendOptions()
+                .show_legend(True)
+                .placement("bottom"),
                 queries=[
                     Query(
                         query_type=PrometheusQuery,
@@ -207,7 +214,10 @@ class EndpointsSection(DashboardSection):
                 visual_orientation="horizontal",
                 display_mode="lcd",
                 panel_type=BarGaugePanel,
-                reduce_options=ReduceDataOptions().values(True).calcs(["sum"]).fields(r"/^Value \(sum\)$/"),
+                reduce_options=ReduceDataOptions()
+                .values(True)
+                .calcs(["sum"])
+                .fields(r"/^Value \(sum\)$/"),
                 queries=[
                     Query(
                         query_type=PrometheusQuery,
@@ -252,7 +262,10 @@ class EndpointsSection(DashboardSection):
                 display_mode="lcd",
                 visual_orientation="horizontal",
                 unit="ms",
-                reduce_options=ReduceDataOptions().values(True).calcs(["sum"]).fields(r"/^Value \(sum\)$/"),
+                reduce_options=ReduceDataOptions()
+                .values(True)
+                .calcs(["sum"])
+                .fields(r"/^Value \(sum\)$/"),
                 queries=[
                     Query(
                         query_type=PrometheusQuery,
@@ -502,6 +515,7 @@ class RuntimeMetricsSection(DashboardSection):
             ),
         ]
 
+
 class TracesSection(DashboardSection):
     """A dashboard section to display service traces"""
 
@@ -521,15 +535,16 @@ class TracesSection(DashboardSection):
                         expr=rf"""
                             {{resource.service.name="{self._service_name}" && resource.{self._env}}}
                         """,
-                        datasource=DataSources.TEMPO
+                        datasource=DataSources.TEMPO,
                     )
-                ]
-            )
+                ],
+            ),
         ]
+
 
 class LogsSection(DashboardSection):
     """A dashboard section to display service logs"""
-    
+
     def __init__(self, title: str, service_name: str, env: DeploymentEnv):
         super().__init__(title)
         self._service_name = service_name
@@ -546,8 +561,8 @@ class LogsSection(DashboardSection):
                         expr=rf"""
                             {{{self._env}, service_name="{self._service_name}"}}
                         """,
-                        datasource=DataSources.LOKI
+                        datasource=DataSources.LOKI,
                     )
-                ]
-            )
+                ],
+            ),
         ]
