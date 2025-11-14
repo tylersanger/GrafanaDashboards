@@ -14,7 +14,8 @@ from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanel
 from grafana_foundation_sdk.builders.barchart import Panel as BarChartPanel
 from grafana_foundation_sdk.builders.bargauge import Panel as BarGaugePanel
 from grafana_foundation_sdk.builders.table import Panel as TablePanel
-from grafana_foundation_sdk.models.dashboard import DataTransformerConfig
+from grafana_foundation_sdk.models.dashboard import DataTransformerConfig, DynamicConfigValue
+from grafana_foundation_sdk.models import units
 from ..dashboard_builder import DashboardPanel, DashboardRow, DashboardSection
 from ..common.common import Query, DataSources, PanelOverride, DeploymentEnv
 
@@ -84,7 +85,7 @@ class ServiceSummarySection(DashboardSection):
                         legend="{{server_address}}",
                     )
                 ],
-                unit="percentunit",
+                unit=units.PercentUnit,
                 stacking_mode="percent",
             ),
             DashboardPanel(
@@ -158,7 +159,7 @@ class ServiceSummarySection(DashboardSection):
                     ),
                 ],
                 panel_type=TimeseriesPanel,
-                unit="s",
+                unit=units.Seconds,
             ),
         ]
 
@@ -189,7 +190,7 @@ class EndpointsSection(DashboardSection):
             ),
             DashboardPanel(
                 title="P95 Latency",
-                unit="s",
+                unit=units.Seconds,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 datasource=DataSources.MIMIR,
                 queries=[
@@ -261,7 +262,7 @@ class EndpointsSection(DashboardSection):
                 panel_type=BarGaugePanel,
                 display_mode="lcd",
                 visual_orientation="horizontal",
-                unit="ms",
+                unit=units.Milliseconds,
                 reduce_options=ReduceDataOptions()
                 .values(True)
                 .calcs(["sum"])
@@ -335,19 +336,41 @@ class InfrastructureMetricsSection(DashboardSection):
                 panel_type=TimeseriesPanel,
                 overrides=[
                     PanelOverride(
-                        query_ref="A",
-                        axis_placement="left",
-                        unit="percent",
-                        axis_label="CPU Utilization",
+                        query_ref_override="A",
+                        values=[
+                            DynamicConfigValue(
+                                id_val="custom.axisPlacement",
+                                value="left",
+                            ),
+                            DynamicConfigValue(
+                                id_val="unit",
+                                value=units.Percent
+                            ),
+                            DynamicConfigValue(
+                                id_val="custom.axisLabel",
+                                value="CPU Utilization",
+                            )
+                        ]
                     ),
                     PanelOverride(
-                        query_ref="B",
-                        axis_placement="right",
-                        unit="percent",
-                        axis_label="CPU Load %",
-                    ),
+                        query_ref_override="B",
+                        values=[
+                            DynamicConfigValue(
+                                id_val="custom.axisPlacement",
+                                value="right",
+                            ),
+                            DynamicConfigValue(
+                                id_val="unit",
+                                value=units.Percent
+                            ),
+                            DynamicConfigValue(
+                                id_val="custom.axisLabel",
+                                value="CPU Load %",
+                            )
+                        ]
+                    )
                 ],
-                unit="percent",
+                unit=units.Percent,
                 queries=[
                     Query(
                         query_type=PrometheusQuery,
@@ -384,7 +407,7 @@ class InfrastructureMetricsSection(DashboardSection):
                 title="Network Bytes In",
                 datasource=DataSources.MIMIR,
                 panel_type=TimeseriesPanel,
-                unit="MBs",
+                unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
@@ -401,7 +424,7 @@ class InfrastructureMetricsSection(DashboardSection):
                 title="Network Bytes Out",
                 datasource=DataSources.MIMIR,
                 panel_type=TimeseriesPanel,
-                unit="MBs",
+                unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
@@ -418,7 +441,7 @@ class InfrastructureMetricsSection(DashboardSection):
                 title="Disk I/O Read",
                 datasource=DataSources.MIMIR,
                 panel_type=TimeseriesPanel,
-                unit="MBs",
+                unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
@@ -437,7 +460,7 @@ class InfrastructureMetricsSection(DashboardSection):
                 title="Disk I/O Write",
                 datasource=DataSources.MIMIR,
                 panel_type=TimeseriesPanel,
-                unit="MBs",
+                unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
@@ -456,7 +479,7 @@ class InfrastructureMetricsSection(DashboardSection):
                 title="Disk I/O Time",
                 datasource=DataSources.MIMIR,
                 panel_type=TimeseriesPanel,
-                unit="s",
+                unit=units.Seconds,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(

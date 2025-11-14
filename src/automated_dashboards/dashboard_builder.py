@@ -110,17 +110,10 @@ class DashboardPanel(DashboardComponent, Generic[T, Q]):
                 panel.with_transformation(transformation)
         if self._overrides:
             for override in self._overrides:
-                panel.override_by_query(
-                    override.query_ref,
-                    [
-                        {
-                            "id": "custom.axisPlacement",
-                            "value": override.axis_placement,
-                        },
-                        {"id": "unit", "value": override.unit},
-                        {"id": "custom.axisLabel", "value": override.axis_label},
-                    ],
-                )
+                if override.query_ref_override:
+                    panel.override_by_query(override.query_ref_override, override.values)
+                elif override.name_to_override:
+                    panel.override_by_name(override.name_to_override, override.values)
         if self._reduce_options:
             panel.reduce_options(self._reduce_options)
 

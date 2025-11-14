@@ -12,6 +12,10 @@ from automated_dashboards.helpers.network_dash_default import (
     NetworkDashboardHistogramSection, 
     NetworkDashboardHeatmapSection
 )
+from automated_dashboards.helpers.jams_default_dash import (
+    JamsInfrastructureMetricsSection,
+    JamsMetricsSection,
+)
 from requests import HTTPError
 
 # Service Dashboards Deployment
@@ -115,7 +119,7 @@ for service in services:
         except (EnvironmentError, HTTPError, ValueError) as e:
             print(f"Failed to deploy {service} | {env} dashboard.\n{e}")
 
-print("All service dashboards deployed successfully.")
+print("Service dashboard deployment done.")
 print("-" * 80)
 
 # Deploy Canada Branch Network Monitoring Dashboard
@@ -132,8 +136,47 @@ network_dash = DashboardBuilder(
 
 try:
     print("Deploying Canada Branch Network Monitoring dashboard...")
-    network_dash.build_and_deploy()
+    network_dash.build_and_deploy(folder_id=34)
 except (EnvironmentError, HTTPError, ValueError) as e:
     print(f"Failed to deploy Canada Branch Network Monitoring dashboard.\n{e}")
-print("Canada Branch Network Monitoring dashboard deployed successfully.")
+else:
+    print("Canada Branch Network Monitoring dashboard deployed successfully.")
+print("-" * 80)
+
+
+# Deploy JAMS Default Dashboard
+envs_and_hosts = {
+    "CASHMONEY": "awsuse2pcb[0-9]*",
+    "LENDDIRECT": "awsuse2pldb[0-9]*",
+    "BUSAPPS": "awsuse2pbsap[0-9]*"
+}
+
+print("Starting deployment of JAMS Service dashboards...")
+
+for folder, host in envs_and_hosts.items():
+    jams_dash = DashboardBuilder(
+        title=f"JAMS Service Dashboard - {folder}",
+        tags=["jams", "DAC", folder.lower()],
+        service=f"jams-{folder.lower()}",
+        env="production",
+        sections=[
+            JamsInfrastructureMetricsSection(title="Infrastructure Metrics"),
+            JamsMetricsSection(title="JAMS Metrics", folder=folder)
+        ]
+    )
+
+    jams_dash.add_dashboard_variable(
+        name="Hostname",
+        query=rf'label_values(system_cpu_utilization{{host_name=~"{host}"}}, host_name)',
+        multi_select=True,
+        include_all=True,
+        data_source=DataSources.MIMIR
+    )
+
+    try:
+        jams_dash.build_and_deploy(folder_id=32)
+    except (EnvironmentError, HTTPError, ValueError) as e:
+        print(f"Failed to deploy JAMS Service dashboard for folder {folder}.\n{e}")
+    else:
+        print(f"Deployed \"JAMS Service Dashboard - {folder}\" successfully.")
 print("-" * 80)

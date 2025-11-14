@@ -11,6 +11,7 @@ from grafana_foundation_sdk.builders.histogram import Panel as HistogramPanel
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQuery
 from grafana_foundation_sdk.builders.loki import Dataquery as LokiQuery
 from grafana_foundation_sdk.builders.tempo import TempoQuery
+from grafana_foundation_sdk.models.dashboard import DynamicConfigValue
 
 # Define a TypeVar for panel types
 T = TypeVar(
@@ -22,6 +23,7 @@ T = TypeVar(
 
 # Define a TypeVar for query types
 Q = TypeVar("Q", bound=Union[PrometheusQuery, LokiQuery, TempoQuery])
+
 
 
 @dataclass
@@ -63,26 +65,30 @@ class Query(Generic[Q]):
     legend_format: Optional[str] = "timeseries"
 
 
-@dataclass
 class PanelOverride:
     """Defines a query override for panel customization.
     
     Attributes:
-        query_ref: str
-            Query refs start at 'A' and increment alphabetically for each query added to a panel.
-            For example, the first query added to a panel has a query_ref of 'A', the second 'B', and so on.
-        axis_placement: str
-            Specifies which axis the override applies to. Valid values are 'left' or 'right'.
-        unit: str
-            The unit to set for the specified query.
-        axis_label: str
-            The label to set for the specified axis.
+        query_ref_override: Optional[str]
+            The reference ID of the query to override (e.g., "A", "B").
+        name_to_override: Optional[str]
+            The name of the variable to apply the override to.
+        values: list[DynamicConfigValue]
+            A list of dynamic configuration values for the override.
     """
+    def __init__(self, 
+        query_ref_override: Optional[str] = None,
+        name_to_override: Optional[str] = None,
+        values: list[DynamicConfigValue] = None,
+    ):
+        self.query_ref_override = query_ref_override
+        self.name_to_override = name_to_override
+        self.values = values if values is not None else []
 
-    query_ref: str
-    axis_placement: str
-    unit: str
-    axis_label: str
+        if bool(self.query_ref_override) + bool(self.name_to_override) != 1:
+            raise ValueError(
+                "A PanelOverride requires exactly one override type to be set: query_ref or name."
+            )
 
 
 @dataclass
