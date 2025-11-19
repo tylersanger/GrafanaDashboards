@@ -1,11 +1,8 @@
 from grafana_foundation_sdk.builders.common import ScaleDistributionConfig
-from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQuery
-from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanel
-from grafana_foundation_sdk.builders.bargauge import Panel as BarGuagePanel
 from grafana_foundation_sdk.models import units
 from grafana_foundation_sdk.models.dashboard import DynamicConfigValue
 from ..dashboard_builder import DashboardPanel, DashboardRow, DashboardSection
-from ..common.common import DataSources, Query, PanelOverride
+from ..common.common import DataSources, Query, PanelOverride, Panels, QueryTypes
 
 
 class JamsInfrastructureMetricsSection(DashboardSection):
@@ -19,11 +16,11 @@ class JamsInfrastructureMetricsSection(DashboardSection):
                 title="Memory Utilization",
                 datasource=DataSources.MIMIR,
                 unit=units.Percent,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             system_memory_utilization{{host_name=~'$Hostname', state!="free"}} * 100
                         """,
                         datasource=DataSources.MIMIR,
@@ -34,7 +31,7 @@ class JamsInfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="CPU Utilization And Load",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 overrides=[
                    PanelOverride(
                         query_ref_override="A",
@@ -74,8 +71,8 @@ class JamsInfrastructureMetricsSection(DashboardSection):
                 unit=units.Percent,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             100 *
                             sum by(host_name) (
                             system_cpu_utilization{{host_name=~'$Hostname', state!="idle"}}
@@ -89,8 +86,8 @@ class JamsInfrastructureMetricsSection(DashboardSection):
                         legend="{{host_name}} - Utilization",
                     ),
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             100 *
                             sum(system_cpu_load_average_1m{{host_name=~'$Hostname'}}) by (host_name)
                             /
@@ -107,13 +104,13 @@ class JamsInfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Network Bytes In",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             rate(system_network_io{{host_name=~'$Hostname', direction="receive", device!="Loopback Pseudo-Interface 1"}}[5m]) / 1024 / 1024
                         """,
                         datasource=DataSources.MIMIR,
@@ -124,13 +121,13 @@ class JamsInfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Network Bytes Out",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             rate(system_network_io{{host_name=~'$Hostname', direction="transmit", device!="Loopback Pseudo-Interface 1"}}[5m]) / 1024 / 1024
                         """,
                         datasource=DataSources.MIMIR,
@@ -141,13 +138,13 @@ class JamsInfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Disk I/O Read",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             avg by (host_name, device) (
                             rate(system_disk_io{{host_name=~'$Hostname', direction="read"}}[5m])
                             ) / 1024 / 1024
@@ -160,13 +157,13 @@ class JamsInfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Disk I/O Write",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             avg by (host_name, device) (
                             rate(system_disk_io{{host_name=~'$Hostname', direction="write"}}[5m])
                             ) / 1024 / 1024
@@ -179,13 +176,13 @@ class JamsInfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Disk I/O Time",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.Seconds,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
-                        expr=rf"""
+                        query_type=QueryTypes.PROMETHEUS,
+                        expr=r"""
                             rate(system_disk_operation_time{{host_name=~'$Hostname'}}[5m])
                         """,
                         datasource=DataSources.MIMIR,
@@ -206,18 +203,18 @@ class JamsMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Exit Severity (JAMS)",
                 datasource=DataSources.MIMIR,
-                panel_type=BarGuagePanel,
+                panel_type=Panels.BARGAUGE,
                 visual_orientation="horizontal",
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf'sum by(exit_severity) (sum_over_time(jams_exit_severity_total{{folder="{self._folder}"}}[$__range]))',
                         datasource=DataSources.MIMIR
                     )
                 ],
                 overrides=[
                     PanelOverride(
-                        name_to_override="Error",
+                        field_to_override="Error",
                         values=[
                             DynamicConfigValue(
                                 id_val="color",
@@ -226,7 +223,7 @@ class JamsMetricsSection(DashboardSection):
                         ]
                     ),
                     PanelOverride(
-                        name_to_override="Warning",
+                        field_to_override="Warning",
                         values=[
                             DynamicConfigValue(
                                 id_val="color",
@@ -235,7 +232,7 @@ class JamsMetricsSection(DashboardSection):
                         ]
                     ),
                     PanelOverride(
-                        name_to_override="Success",
+                        field_to_override="Success",
                         values=[
                             DynamicConfigValue(
                                 id_val="color",
@@ -244,7 +241,7 @@ class JamsMetricsSection(DashboardSection):
                         ]
                     ),
                     PanelOverride(
-                        name_to_override="Unknown",
+                        field_to_override="Unknown",
                         values=[
                             DynamicConfigValue(
                                 id_val="color",

@@ -7,17 +7,10 @@ from grafana_foundation_sdk.builders.common import (
     ReduceDataOptions,
     VizLegendOptions,
 )
-from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQuery
-from grafana_foundation_sdk.builders.tempo import TempoQuery
-from grafana_foundation_sdk.builders.loki import Dataquery as LokiQuery
-from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanel
-from grafana_foundation_sdk.builders.barchart import Panel as BarChartPanel
-from grafana_foundation_sdk.builders.bargauge import Panel as BarGaugePanel
-from grafana_foundation_sdk.builders.table import Panel as TablePanel
 from grafana_foundation_sdk.models.dashboard import DataTransformerConfig, DynamicConfigValue
 from grafana_foundation_sdk.models import units
 from ..dashboard_builder import DashboardPanel, DashboardRow, DashboardSection
-from ..common.common import Query, DataSources, PanelOverride, DeploymentEnv
+from ..common.common import Query, DataSources, PanelOverride, DeploymentEnv, Panels, QueryTypes
 
 
 class ServiceSummarySection(DashboardSection):
@@ -33,35 +26,35 @@ class ServiceSummarySection(DashboardSection):
                 datasource=DataSources.MIMIR,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=f"""sum(increase(http_server_request_duration_count{{{self._env}, service_name="{service_name}"}}[5m]))""",
                         datasource=DataSources.MIMIR,
                     )
                 ],
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
             ),
             DashboardPanel(
                 title="Error Rate | 401's",
                 datasource=DataSources.MIMIR,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=f"""sum by(http_response_status_code) (increase(http_server_request_duration_count{{{self._env}, service_name="{service_name}", http_response_status_code=~"401"}}[5m]))""",
                         datasource=DataSources.MIMIR,
                     )
                 ],
-                panel_type=BarChartPanel,
+                panel_type=Panels.BARCHART,
             ),
             DashboardPanel(
                 title="Time Spent",
                 datasource=DataSources.MIMIR,
-                panel_type=BarChartPanel,
+                panel_type=Panels.BARCHART,
                 viz_legend_options=VizLegendOptions()
                 .show_legend(True)
                 .placement("bottom"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                             sum by (server_address) (
                                 rate(http_client_request_duration_sum{{
@@ -93,14 +86,14 @@ class ServiceSummarySection(DashboardSection):
                 datasource=DataSources.MIMIR,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""sum by(http_response_status_code) (increase(http_server_request_duration_count{{{self._env},
                                 service_name="{service_name}", http_response_status_code!~"2..|3..|1..|401"}}[5m]))
                                 """,
                         datasource=DataSources.MIMIR,
                     )
                 ],
-                panel_type=BarGaugePanel,
+                panel_type=Panels.BARGAUGE,
                 visual_orientation="horizontal",
                 display_mode="lcd",
             ),
@@ -110,7 +103,7 @@ class ServiceSummarySection(DashboardSection):
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                         histogram_quantile(0.75,
                         sum by (le, service_name) (
@@ -122,7 +115,7 @@ class ServiceSummarySection(DashboardSection):
                         legend="{{service_name}} - P75",
                     ),
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                         histogram_quantile(0.95,
                         sum by (le, service_name) (
@@ -134,7 +127,7 @@ class ServiceSummarySection(DashboardSection):
                         legend="{{service_name}} - P95",
                     ),
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                         histogram_quantile(0.50,
                         sum by (le, service_name) (
@@ -146,7 +139,7 @@ class ServiceSummarySection(DashboardSection):
                         legend="{{service_name}} - P50",
                     ),
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                         histogram_quantile(0.90,
                         sum by (le, service_name) (
@@ -158,7 +151,7 @@ class ServiceSummarySection(DashboardSection):
                         legend="{{service_name}} - P90",
                     ),
                 ],
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.Seconds,
             ),
         ]
@@ -177,7 +170,7 @@ class EndpointsSection(DashboardSection):
                 datasource=DataSources.MIMIR,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                             sum by (http_route) (
                                 increase(http_server_request_duration_count{{service_name='{service_name}', {self._env}, http_route!=""}}[5m])
@@ -186,7 +179,7 @@ class EndpointsSection(DashboardSection):
                         datasource=DataSources.MIMIR,
                     )
                 ],
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
             ),
             DashboardPanel(
                 title="P95 Latency",
@@ -195,7 +188,7 @@ class EndpointsSection(DashboardSection):
                 datasource=DataSources.MIMIR,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                             histogram_quantile(
                                 0.95,
@@ -207,21 +200,21 @@ class EndpointsSection(DashboardSection):
                         datasource=DataSources.MIMIR,
                     )
                 ],
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
             ),
             DashboardPanel(
                 title="Requests Count By Route",
                 datasource=DataSources.MIMIR,
                 visual_orientation="horizontal",
                 display_mode="lcd",
-                panel_type=BarGaugePanel,
+                panel_type=Panels.BARGAUGE,
                 reduce_options=ReduceDataOptions()
                 .values(True)
                 .calcs(["sum"])
                 .fields(r"/^Value \(sum\)$/"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                             sum by (http_route) (
                                 increase(http_server_request_duration_count{{service_name='{service_name}', {self._env}, http_route!=""}}[5m])
@@ -259,7 +252,7 @@ class EndpointsSection(DashboardSection):
             DashboardPanel(
                 title="Requests Time Spent By Route",
                 datasource=DataSources.MIMIR,
-                panel_type=BarGaugePanel,
+                panel_type=Panels.BARGAUGE,
                 display_mode="lcd",
                 visual_orientation="horizontal",
                 unit=units.Milliseconds,
@@ -269,7 +262,7 @@ class EndpointsSection(DashboardSection):
                 .fields(r"/^Value \(sum\)$/"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                             sum by (http_route) (
                                 increase(http_server_request_duration_sum{{service_name='{service_name}', {self._env}, http_route!=""}}[5m])
@@ -318,10 +311,10 @@ class InfrastructureMetricsSection(DashboardSection):
                 title="Memory Utilization",
                 datasource=DataSources.MIMIR,
                 unit="percent",
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             system_memory_utilization{host_name=~'$Hostname', state!="free"} * 100
                         """,
@@ -333,7 +326,7 @@ class InfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="CPU Utilization And Load",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 overrides=[
                     PanelOverride(
                         query_ref_override="A",
@@ -373,7 +366,7 @@ class InfrastructureMetricsSection(DashboardSection):
                 unit=units.Percent,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             100 *
                             sum by(host_name) (
@@ -388,7 +381,7 @@ class InfrastructureMetricsSection(DashboardSection):
                         legend="{{host_name}} - Utilization",
                     ),
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             100 *
                             sum(system_cpu_load_average_1m{host_name=~"$Hostname"}) by (host_name)
@@ -406,12 +399,12 @@ class InfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Network Bytes In",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             rate(system_network_io{host_name=~'$Hostname', direction="receive", device!="Loopback Pseudo-Interface 1"}[5m]) / 1024 / 1024
                         """,
@@ -423,12 +416,12 @@ class InfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Network Bytes Out",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             rate(system_network_io{host_name=~'$Hostname', direction="transmit", device!="Loopback Pseudo-Interface 1"}[5m]) / 1024 / 1024
                         """,
@@ -440,12 +433,12 @@ class InfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Disk I/O Read",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             avg by (host_name, device) (
                             rate(system_disk_io{host_name=~"$Hostname", direction="read"}[5m])
@@ -459,12 +452,12 @@ class InfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Disk I/O Write",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.MegabytesPerSecond,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             avg by (host_name, device) (
                             rate(system_disk_io{host_name=~"$Hostname", direction="write"}[5m])
@@ -478,12 +471,12 @@ class InfrastructureMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Disk I/O Time",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 unit=units.Seconds,
                 scale_distribution=ScaleDistributionConfig().log(log=2.0).type("log"),
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=r"""
                             rate(system_disk_operation_time{host_name=~'$Hostname'}[5m])
                         """,
@@ -507,10 +500,10 @@ class RuntimeMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Thread Count",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                                 sum by(host_name) (process_runtime_dotnet_thread_pool_threads_count{{service_name="{self._service_name}", {self._env}}})
                             """,
@@ -522,10 +515,10 @@ class RuntimeMetricsSection(DashboardSection):
             DashboardPanel(
                 title="Thread Contention",
                 datasource=DataSources.MIMIR,
-                panel_type=TimeseriesPanel,
+                panel_type=Panels.TIMESERIES,
                 queries=[
                     Query(
-                        query_type=PrometheusQuery,
+                        query_type=QueryTypes.PROMETHEUS,
                         expr=rf"""
                                 sum by (host_name) (
                                 increase(process_runtime_dotnet_monitor_lock_contention_count{{service_name="{self._service_name}", {self._env}}}[5m])
@@ -551,10 +544,10 @@ class TracesSection(DashboardSection):
             DashboardPanel(
                 title="Traces",
                 datasource=DataSources.TEMPO,
-                panel_type=TablePanel,
+                panel_type=Panels.TABLE,
                 queries=[
                     Query(
-                        query_type=TempoQuery,
+                        query_type=QueryTypes.TEMPO,
                         expr=rf"""
                             {{resource.service.name="{self._service_name}" && resource.{self._env}}}
                         """,
@@ -577,10 +570,10 @@ class LogsSection(DashboardSection):
             DashboardPanel(
                 title="Logs",
                 datasource=DataSources.LOKI,
-                panel_type=TablePanel,
+                panel_type=Panels.TABLE,
                 queries=[
                     Query(
-                        query_type=LokiQuery,
+                        query_type=QueryTypes.LOKI,
                         expr=rf"""
                             {{{self._env}, service_name="{self._service_name}"}}
                         """,

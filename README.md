@@ -7,14 +7,14 @@ create dashboards using Python. This allows us to easily create and manage all d
 ```
 automated_dashboards/
 │
-├── common/
-│   └── common.py
+├── common/ # Common items dashboards can be configured with.
+│   
 │
-├── dashboards/
-│   └── all_dashboards.py
+├── dashboards/ # Built dashboards reside here
+│   
 │
-├── helpers/
-│   └── default_dashboard.py
+├── helpers/ # Default dashboard configurations reside here
+│   
 │
 └── dashboard_builder.py
 ```
@@ -24,8 +24,9 @@ Dashboards are composed of logical sections. Each section can be composed of one
 queries associated with each panel.
 
 ## Creating A Dashboard From The Default Settings
-We have a `Service Dashboard Template` inside of `helpers` that creates the default dashboard. To 
-create one, you can do the following. Below is an example of a production service dashboard.
+We have a `Service Dashboard Template` inside of `helpers` that creates the default service dashboard. The default dashboard uses
+a dashboard variable called `Hostname` to dynamically pull host metrics for each service. To create the default dashboard with the defined
+dashboard variable, you can do the following:
 ```python
 # service = your_service
 # env = 'prod'
@@ -63,8 +64,7 @@ dash.add_dashboard_variable(
 )
 
 try:
-    dash.build()
-    dash.deploy_to_grafana(folder=129) # DAC Service Dashboards folder ID
+    dash.build_and_deploy(folder_id=129) # You can specify a folder ID if known or leave blank and get prompted for it.
     print(f"{service} | {env} dashboard deployed successfully.")
 except EnvironmentError as e:
     print(f"Failed to deploy {service} dashboard: {e}")
@@ -73,11 +73,9 @@ You can add custom panels to a section. In this example we're going to add a Tim
 to the `LogsSection` imported from `helpers/default_dashboard.py`
 ```python
 from automated_dashboards.dashboard_builder import DashboardPanel
-from automated_dashboards.commom.common import DataSources
+from automated_dashboards.commom.common import DataSources, Panels, QueryTypes
 from automated_dashboards.dashboard_builder import DashboardBuilder
 from automated_dashboards.helpers.default_dashboard import LogsSection
-from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQuery
-from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanel
 
 LogsSection.add_component(
     DashboardPanel(
@@ -85,12 +83,12 @@ LogsSection.add_component(
         datasource=DataSources.MIMIR,
         queries=[
             Query(
-                query_type=PrometheusQuery,
+                query_type=QueryTypes.PROMETHEUS,
                 expr=f"""sum(increase(http_server_request_duration_count{{service_name="my_service"}}[5m]))""",
                 datasource=DataSources.MIMIR,
             )
         ],
-        panel_type=TimeseriesPanel,
+        panel_type=Panels.TIMESERIES,
     )
 )
 
@@ -104,7 +102,7 @@ dash = DashboardBuilder(
     ]
 )
 
-dash.build()
+dash.build_and_deploy()
 ```
 ## Adding Dashboard Variables:
 Dashboard variables can be used in queries to dynamically change a queries parameters. Dashboard variables are prefixed with a
@@ -118,5 +116,18 @@ dash.add_dashboard_variable(
     include_all=True,
     data_source=DataSources.MIMIR
 )
+```
+Example of a Query utilizing the `Hostname` variable defined above:
+```python
+...
+Query(
+    query_type=QueryTypes.PROMETHEUS,
+    expr=r"""
+        system_memory_utilization{host_name=~'$Hostname', state!="free"} * 100
+    """,
+    datasource=DataSources.MIMIR,
+    legend="{{host_name}}",
+)
+...
 ```
 This module will check for dashboard variables in queries and ensure that varaible is defined. If it is not a `ValueError` will be thrown.

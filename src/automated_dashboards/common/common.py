@@ -24,7 +24,37 @@ T = TypeVar(
 # Define a TypeVar for query types
 Q = TypeVar("Q", bound=Union[PrometheusQuery, LokiQuery, TempoQuery])
 
+@dataclass
+class Panels(Generic[T]):
+    """Defines common panel types used in dashboards.
+    Attributes:
+        TIMESERIES: Timeseries panel type.
+        BARCHART: Bar chart panel type.
+        BARGAUGE: Bar gauge panel type.
+        TABLE: Table panel type.
+        HEATMAP: Heatmap panel type.
+        HISTOGRAM: Histogram panel type.
+    """
 
+    TIMESERIES: Type[T] = TimeseriesPanel
+    BARCHART: Type[T] = BarChartPanel
+    BARGAUGE: Type[T] = BarGaugePanel
+    TABLE: Type[T] = TablePanel
+    HEATMAP: Type[T] = HeatmapPanel
+    HISTOGRAM: Type[T] = HistogramPanel
+
+@dataclass
+class QueryTypes(Generic[Q]):
+    """Defines common query types used in dashboards.
+    Attributes:
+        PROMETHEUS: Prometheus query type.
+        LOKI: Loki query type.
+        TEMPO: Tempo query type.
+    """
+
+    PROMETHEUS: Type[Q] = PrometheusQuery
+    LOKI: Type[Q] = LokiQuery
+    TEMPO: Type[Q] = TempoQuery
 
 @dataclass
 class DeploymentEnv:
@@ -43,10 +73,10 @@ class DeploymentEnv:
 
 
 @dataclass
-class Query(Generic[Q]):
+class Query:
     """Constructs a query object for dashboard panels.
     Attributes:
-        query_type: Type[Q]
+        query_type: QueryTypes
             The type of query (e.g., PrometheusQuery).
         expr: str
             The query expression. Should be a raw string r'...' to handle special characters.
@@ -58,36 +88,33 @@ class Query(Generic[Q]):
             The format of the legend (e.g., "timeseries", "table").
     """
 
-    query_type: Type[Q]
+    query_type: QueryTypes
     expr: str
     datasource: "DataSources"
     legend: Optional[str] = "__auto"
     legend_format: Optional[str] = "timeseries"
 
-
+@dataclass
 class PanelOverride:
-    """Defines a query override for panel customization.
-    
+    """Defines an override for a panel.
+    A valid override requires exactly one of the following attributes to be set: query_ref_override or field_to_override.
+
     Attributes:
         query_ref_override: Optional[str]
             The reference ID of the query to override (e.g., "A", "B").
-        name_to_override: Optional[str]
-            The name of the variable to apply the override to.
+        field_to_override: Optional[str]
+            The name of the field to apply the override to.
         values: list[DynamicConfigValue]
             A list of dynamic configuration values for the override.
     """
-    def __init__(self, 
-        query_ref_override: Optional[str] = None,
-        name_to_override: Optional[str] = None,
-        values: list[DynamicConfigValue] = None,
-    ):
-        self.query_ref_override = query_ref_override
-        self.name_to_override = name_to_override
-        self.values = values if values is not None else []
+    query_ref_override: Optional[str] = None
+    field_to_override: Optional[str] = None
+    values: list[DynamicConfigValue] = []
 
-        if bool(self.query_ref_override) + bool(self.name_to_override) != 1:
+    def __post_init__(self):
+        if bool(self.query_ref_override) + bool(self.field_to_override) != 1:
             raise ValueError(
-                "A PanelOverride requires exactly one override type to be set: query_ref or name."
+                "A PanelOverride requires exactly one override type to be set: query_ref or field."
             )
 
 
